@@ -1,6 +1,9 @@
 from devices import RAZER_DEVICE_LIST
 from device_controller import DeviceController
 import hid
+import logging
+
+logger = logging.getLogger(__name__)
 
 
 # Expect not many connected devices -> List instead of Dict

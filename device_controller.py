@@ -1,8 +1,11 @@
 from devices import *
 import hid
 import time
+import logging
 
 MAX_RETRY_SEND = 2
+
+logger = logging.getLogger(__name__)
 
 
 class RazerReport:
@@ -48,6 +51,11 @@ class RazerReport:
 
     def from_bytes(data):
         if len(data) != 90:
+            logger.error(
+                "Expected 90 bytes of data as razer raport but got {:d} bytes: {}".format(
+                    len(data), data
+                ),
+            )
             raise ValueError("Expected 90 bytes of data as razer raport")
 
         report = RazerReport()
@@ -136,6 +144,11 @@ class DeviceController:
         try:
             self._handle.open_path(self._path)
         except OSError as e:
+            logger.error(
+                "Failed to open device: {:s} with error message: {:s}".format(
+                    self._name, e
+                )
+            )
             raise ValueError("Failed to open device: " + self._name) from e
 
         # enable non-blocking mode
@@ -179,23 +192,33 @@ class DeviceController:
                 or response.command_class != request.command_class
                 or response.command_id != request.command_id
             ):
+                logger.error("Response doesn't match request")
                 raise ValueError("Response doesn't match request")
 
             match response.status:
                 case RazerReport.STATUS_SUCCESSFUL:
+                    logger.info("Command successful")
                     break
                 case RazerReport.STATUS_BUSY:
+                    logger.info("Device is busy")
                     print("Device is busy")
                 case RazerReport.STATUS_NO_RESPONSE:
+                    logger.info("Command timed out")
                     print("Command timed out")
                 case RazerReport.STATUS_NOT_SUPPORTED:
+                    logger.error("Command not supported")
                     raise ValueError("Command not supported")
                 case RazerReport.STATUS_FAILURE:
+                    logger.error("Command failed")
                     raise ValueError("Command failed")
                 case _:
+                    logger.error("Error unknown report status")
                     raise ValueError("Error unknown report status")
 
             if i == MAX_RETRY_SEND:
+                logger.error(
+                    "Abort command after {:d} retries".format(MAX_RETRY_SEND + 1)
+                )
                 raise ValueError(
                     "Abort command (tries: {:d})".format(MAX_RETRY_SEND + 1)
                 )
@@ -232,6 +255,7 @@ class DeviceController:
         time.sleep(0.05)
 
         if bytes_sent != len(data) + 1:
+            logger.error("Error while sending feature report")
             raise ValueError("Error while sending feature report")
 
     def _usb_receive(self) -> RazerReport:
@@ -242,12 +266,14 @@ class DeviceController:
         time.sleep(0.1)
 
         if len(data) != expected_length:
+            logger.error("Error while getting feature report")
             raise ValueError("Error while getting feature report")
 
         # omit first byte (report id)
         report = RazerReport.from_bytes(data[1:])
 
         if not report.is_valid():
+            logger.error("CRC failed {}".format(report))
             raise ValueError("Get report has no valid crc")
 
         return report

@@ -5,6 +5,8 @@ from winotify import Notification, audio
 from PIL import Image
 from pathlib import Path
 import pystray
+import logging
+
 
 PROJECT_PATH = Path(__file__).parent.resolve()
 TRAY_ICON_LOGO_FILENAME = "razer-logo-tray.png"
@@ -12,6 +14,16 @@ NOTIFICATION_LOGO_FILENAME = "razer-logo.png"
 
 BATTERY_UPDATE_INTERVAL = 120  # seconds
 DEVICE_FETCH_INTERVAL = 5  # seconds
+
+logging.basicConfig(
+    filename=PROJECT_PATH / "razer_battery_checker.log",
+    filemode="w",
+    level=logging.DEBUG,
+    format="%(asctime)s,%(msecs)03d %(levelname)-8s [%(filename)s:%(funcName)s:%(lineno)d] %(message)s",
+    datefmt="%Y-%m-%d:%H:%M:%S",
+)
+
+logger = logging.getLogger(__name__)
 
 
 @dataclass
@@ -61,12 +73,16 @@ class TrayIconApp(Thread):
                 # update device list
                 with self._devices_lock:
                     for id in removed_devices:
+                        logger.info(
+                            "Device removed: {:s}".format(self._devices[id].name)
+                        )
                         print("Device removed: {:s}".format(self._devices[id].name))
                         del self._devices[id]
 
                     for id in added_devices:
                         name = self._device_manager.get_device_name(id)
                         self._devices[id] = MemoryDevice(name, id)
+                        logger.info("New device: {:s}".format(name))
                         print("New device: {:s}".format(name))
 
             self._update(added_devices)
@@ -75,6 +91,7 @@ class TrayIconApp(Thread):
 
     def _on_exit_pressed(self):
         self._exit_event.set()
+        logger.info("Exit app")
         print("Exit")
 
     def _get_menu_items(self):
@@ -123,6 +140,11 @@ class TrayIconApp(Thread):
                 for id in devices:
                     battery_level = self._device_manager.get_device_battery_level(id)
                     self._devices[id].battery_level = battery_level
+                    logger.info(
+                        "Updated battery level {:d}% for {:s}".format(
+                            battery_level, self._devices[id].name
+                        )
+                    )
 
         with self._update_lock:
             self._tray_icon.menu = self._get_menu_items()
