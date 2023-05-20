@@ -36,6 +36,15 @@ class DeviceManager:
         controller.close()
 
         return battery_level
+    
+    def is_device_charging(self, id: int) -> bool:
+        controller = self._get_controller_from_id(id)
+
+        controller.open()
+        charging_status = controller.get_charging_status()
+        controller.close()
+
+        return bool(charging_status)
 
     def _get_controller_from_id(self, id: int) -> DeviceController:
         for controller in self._device_controllers:

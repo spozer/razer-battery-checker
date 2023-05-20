@@ -170,9 +170,25 @@ class DeviceController:
             print(e)
             print("Could not get battery level, setting it to -1")
 
-        print("{:s}\t{:.2f}%".format(self._name, battery_level))
+        print("{:s}\t battery level: {:.2f}%".format(self._name, battery_level))
 
         return round(battery_level)
+
+    def get_charging_status(self) -> bool:
+        charging_status = 0
+
+        request = self._create_command(0x07, 0x84, 0x02)
+
+        try:
+            response = self._send_payload(request)
+            charging_status = response.arguments[1]
+        except ValueError as e:
+            print(e)
+            print("Could not get charging status, setting it to 0")
+
+        print("{:s}\t charging status: {:d}".format(self._name, charging_status))
+
+        return charging_status
 
     def _send_payload(self, request: RazerReport) -> RazerReport:
         request.crc = request.calculate_crc()
@@ -217,7 +233,7 @@ class DeviceController:
 
             if i == MAX_RETRY_SEND:
                 logger.error(
-                    "Abort command after {:d} retries".format(MAX_RETRY_SEND + 1)
+                    "Abort command after {:d} tries".format(MAX_RETRY_SEND + 1)
                 )
                 raise ValueError(
                     "Abort command (tries: {:d})".format(MAX_RETRY_SEND + 1)

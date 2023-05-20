@@ -32,6 +32,7 @@ class MemoryDevice:
     id: int
     battery_level: int = -1
     old_battery_level: int = 50
+    is_charging: bool = False
 
 
 class TrayIconApp(Thread):
@@ -85,7 +86,8 @@ class TrayIconApp(Thread):
                         logger.info("New device: {:s}".format(name))
                         print("New device: {:s}".format(name))
 
-            self._update(added_devices)
+            if len(removed_devices) > 0 or len(added_devices) > 0:
+                self._update(added_devices)
 
             self._exit_event.wait(DEVICE_FETCH_INTERVAL)
 
@@ -98,10 +100,12 @@ class TrayIconApp(Thread):
         menu = []
 
         for device in self._devices.values():
+            display_name = device.name
+            if device.is_charging:
+                display_name += " (charging)"
             device_entry = pystray.MenuItem(
-                "{:s}\t{:d}%".format(str(device.name), device.battery_level),
-                None,
-                radio=True,
+                text="{:s}\t{:d}%".format(display_name, device.battery_level),
+                action=None,
                 enabled=False,
             )
             menu.append(device_entry)
@@ -127,10 +131,16 @@ class TrayIconApp(Thread):
             if device.battery_level == -1:
                 continue
             # check for low battery level
-            if device.old_battery_level > 15 and device.battery_level <= 15:
+            if device.battery_level <= 5 or (
+                device.old_battery_level > 15 and device.battery_level <= 15
+            ):
                 self._notify(device.name, "Battery low", device.battery_level)
             # check if battery charged fully
-            elif device.old_battery_level <= 99 and device.battery_level == 100:
+            elif (
+                device.old_battery_level <= 99
+                and device.battery_level == 100
+                and device.is_charging
+            ):
                 self._notify(device.name, "Battery fully charged", device.battery_level)
 
     def _update(self, devices: list[int]):
@@ -139,10 +149,25 @@ class TrayIconApp(Thread):
             with self._devices_lock:
                 for id in devices:
                     battery_level = self._device_manager.get_device_battery_level(id)
+
+                    if battery_level == -1:
+                        continue
+
+                    old_battery_level = self._devices[id].battery_level
                     self._devices[id].battery_level = battery_level
+
+                    if old_battery_level != -1:
+                        self._devices[id].old_battery_level = old_battery_level
+
+                    self._devices[
+                        id
+                    ].is_charging = self._device_manager.is_device_charging(id)
+
                     logger.info(
-                        "Updated battery level {:d}% for {:s}".format(
-                            battery_level, self._devices[id].name
+                        "Updated battery level {:d}%, charging: {} for {:s}".format(
+                            battery_level,
+                            self._devices[id].is_charging,
+                            self._devices[id].name,
                         )
                     )
 

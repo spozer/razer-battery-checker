@@ -12,11 +12,11 @@ class RazerDevice:
 
 
 RAZER_DEATHADDER_V2_PRO_WIRELESS = RazerDevice(
-    "Razer DeathAdder V2 Pro Wireless", 0x007D, 0, 1, 2
+    "Razer DeathAdder V2 Pro", 0x007D, 0, 1, 2
 )
 
 RAZER_DEATHADDER_V2_PRO_WIRED = RazerDevice(
-    "Razer DeathAdder V2 Pro Wired", 0x007C, 0, 1, 2
+    "Razer DeathAdder V2 Pro", 0x007C, 0, 1, 2
 )
 
 RAZER_DEVICE_LIST = [RAZER_DEATHADDER_V2_PRO_WIRELESS, RAZER_DEATHADDER_V2_PRO_WIRED]
