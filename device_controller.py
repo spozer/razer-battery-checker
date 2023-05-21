@@ -64,8 +64,7 @@ class RazerReport:
 
         report.status = data[0]
         report.transaction_id = data[1]
-        # Big Endian
-        report.remaining_packets = data[2] << 8 | data[3]
+        report.remaining_packets = data[2] << 8 | data[3]  # Big Endian
         report.protocol_type = data[4]
         report.data_size = data[5]
         report.command_class = data[6]
@@ -80,9 +79,8 @@ class RazerReport:
         data = [
             self.status,
             self.transaction_id,
-            # Big Endian
-            self.remaining_packets & 0x1100,
-            self.remaining_packets & 0x0011,
+            self.remaining_packets & 0x1100,  # Big Endian
+            self.remaining_packets & 0x0011,  # Big Endian
             self.protocol_type,
             self.data_size,
             self.command_class,
@@ -109,19 +107,19 @@ class RazerReport:
 
 
 class DeviceController:
-    _handle: hid.device
-    _name: str
-    _pid: int
-    _path: str
-    _report_id: int
-    _transaction_id: int
+    __handle: hid.device
+    __name: str
+    __pid: int
+    __path: str
+    __report_id: int
+    __transaction_id: int
 
     def __init__(self, name: str, pid: int, path: str) -> None:
-        self._handle = hid.device()
-        self._name = name
-        self._pid = pid
-        self._path = path
-        self._report_id = 0x00
+        self.__handle = hid.device()
+        self.__name = name
+        self.__pid = pid
+        self.__path = path
+        self.__report_id = 0x00
 
         match pid:
             case (
@@ -130,86 +128,86 @@ class DeviceController:
                 | RAZER_BASILISK_V3_PRO_WIRED.pid
                 | RAZER_BASILISK_V3_PRO_WIRELESS.pid
             ):
-                self._transaction_id = 0x1F
+                self.__transaction_id = 0x1F
             case (
                 RAZER_DEATHADDER_V2_PRO_WIRED.pid
                 | RAZER_DEATHADDER_V2_PRO_WIRELESS.pid
                 | _
             ):
-                self._transaction_id = 0x3F
+                self.__transaction_id = 0x3F
 
     def __del__(self) -> None:
         self.close()
 
     @property
     def name(self) -> str:
-        return self._name
+        return self.__name
 
     @property
     def id(self) -> int:
-        return self._pid
+        return self.__pid
 
     def open(self) -> None:
         try:
-            self._handle.open_path(self._path)
+            self.__handle.open_path(self.__path)
         except OSError as e:
             logger.error(
                 "Failed to open device: {:s} with error message: {:s}".format(
-                    self._name, e
+                    self.__name, e
                 )
             )
-            raise ValueError("Failed to open device: " + self._name) from e
+            raise ValueError("Failed to open device: " + self.__name) from e
 
         # enable non-blocking mode
-        self._handle.set_nonblocking(1.0)
+        self.__handle.set_nonblocking(1.0)
 
     def close(self) -> None:
-        if self._handle is not None:
-            self._handle.close()
+        if self.__handle is not None:
+            self.__handle.close()
 
     def get_battery_level(self) -> int:
         battery_level = -1.0
 
-        request = self._create_command(0x07, 0x80, 0x02)
+        request = self.__create_command(0x07, 0x80, 0x02)
 
         try:
-            response = self._send_payload(request)
+            response = self.__send_payload(request)
             battery_level = (response.arguments[1] / 255) * 100.0
         except ValueError as e:
             print(e)
             print("Could not get battery level, setting it to -1")
 
-        print("{:s}\t battery level: {:.2f}%".format(self._name, battery_level))
+        print("{:s}\t battery level: {:.2f}%".format(self.__name, battery_level))
 
         return round(battery_level)
 
     def get_charging_status(self) -> bool:
         charging_status = 0
 
-        request = self._create_command(0x07, 0x84, 0x02)
+        request = self.__create_command(0x07, 0x84, 0x02)
 
         try:
-            response = self._send_payload(request)
+            response = self.__send_payload(request)
             charging_status = response.arguments[1]
         except ValueError as e:
             print(e)
             print("Could not get charging status, setting it to 0")
 
-        print("{:s}\t charging status: {:d}".format(self._name, charging_status))
+        print("{:s}\t charging status: {:d}".format(self.__name, charging_status))
 
         return charging_status
 
-    def _send_payload(self, request: RazerReport) -> RazerReport:
+    def __send_payload(self, request: RazerReport) -> RazerReport:
         request.crc = request.calculate_crc()
         response = None
 
         # try to resend report if device is busy or non responsive
         for i in range(MAX_TRIES_SEND):
             # TODO exception handling
-            self._usb_send(request)
+            self.__usb_send(request)
 
             # TODO exception handling
-            response = self._usb_receive()
+            response = self.__usb_receive()
 
             # check if response matches request
             if (
@@ -249,7 +247,7 @@ class DeviceController:
 
         return response
 
-    def _create_command(
+    def __create_command(
         self, command_class: int, command_id: int, data_size: int
     ) -> RazerReport:
         assert command_class < 0xFF
@@ -259,7 +257,7 @@ class DeviceController:
         report = RazerReport()
 
         report.status = RazerReport.STATUS_NEW_COMMAND
-        report.transaction_id = self._transaction_id
+        report.transaction_id = self.__transaction_id
         report.remaining_packets = 0x00
         report.protocol_type = 0x00
         report.command_class = command_class
@@ -268,22 +266,22 @@ class DeviceController:
 
         return report
 
-    def _usb_send(self, report: RazerReport) -> None:
+    def __usb_send(self, report: RazerReport) -> None:
         data = report.pack()
 
         # windows expects report id as first entry of report
-        bytes_sent = self._handle.send_feature_report([self._report_id] + data)
+        bytes_sent = self.__handle.send_feature_report([self.__report_id] + data)
         time.sleep(0.06)
 
         if bytes_sent != len(data) + 1:
             logger.error("Error while sending feature report")
             raise ValueError("Error while sending feature report")
 
-    def _usb_receive(self) -> RazerReport:
+    def __usb_receive(self) -> RazerReport:
         # windows expects report id as first entry of report (90 bytes)
         expected_length = 91
 
-        data = self._handle.get_feature_report(self._report_id, expected_length)
+        data = self.__handle.get_feature_report(self.__report_id, expected_length)
         # time.sleep(0.1)
 
         if len(data) != expected_length:

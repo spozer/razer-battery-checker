@@ -8,15 +8,15 @@ logger = logging.getLogger(__name__)
 
 # Expect not many connected devices -> List instead of Dict
 class DeviceManager:
-    _device_controllers: list[DeviceController] = []
+    __device_controllers: list[DeviceController] = []
 
     def __init__(self) -> None:
         pass
 
     def fetch_devices(self) -> tuple[list[int], list[int]]:
-        old_ids = [controller.id for controller in self._device_controllers]
-        self._device_controllers = self._get_connected_devices()
-        new_ids = [controller.id for controller in self._device_controllers]
+        old_ids = [controller.id for controller in self.__device_controllers]
+        self.__device_controllers = self.__get_connected_devices()
+        new_ids = [controller.id for controller in self.__device_controllers]
 
         removed_devices = [id for id in old_ids if id not in new_ids]
         added_devices = [id for id in new_ids if id not in old_ids]
@@ -24,21 +24,21 @@ class DeviceManager:
         return (removed_devices, added_devices)
 
     def get_device_name(self, id: int) -> str:
-        controller = self._get_controller_from_id(id)
+        controller = self.__get_controller_from_id(id)
 
         return controller.name
 
     def get_device_battery_level(self, id: int) -> int:
-        controller = self._get_controller_from_id(id)
+        controller = self.__get_controller_from_id(id)
 
         controller.open()
         battery_level = controller.get_battery_level()
         controller.close()
 
         return battery_level
-    
+
     def is_device_charging(self, id: int) -> bool:
-        controller = self._get_controller_from_id(id)
+        controller = self.__get_controller_from_id(id)
 
         controller.open()
         charging_status = controller.get_charging_status()
@@ -46,12 +46,12 @@ class DeviceManager:
 
         return bool(charging_status)
 
-    def _get_controller_from_id(self, id: int) -> DeviceController:
-        for controller in self._device_controllers:
+    def __get_controller_from_id(self, id: int) -> DeviceController:
+        for controller in self.__device_controllers:
             if controller.id == id:
                 return controller
 
-    def _get_connected_devices(self) -> list[DeviceController]:
+    def __get_connected_devices(self) -> list[DeviceController]:
         connected_devices = []
 
         # TODO exception handling for hid calls
