@@ -1,5 +1,6 @@
 from devices import RAZER_DEVICE_LIST
 from device_controller import DeviceController
+import platform
 import hid
 import logging
 
@@ -66,11 +67,15 @@ class DeviceManager:
 
             # find matching HID control for each device
             for hid_control in hid_collection:
-                if (
-                    hid_control["interface_number"] == device.interface
-                    and hid_control["usage_page"] == device.usage_page
-                    and hid_control["usage"] == device.usage
-                ):
+                if hid_control["interface_number"] == device.interface:
+
+                    # Windows subdivides interfaces into different usages
+                    if platform.system() == "Windows" and (
+                        hid_control["usage_page"] != device.usage_page
+                        or hid_control["usage"] != device.usage
+                    ):
+                        continue
+
                     controller = DeviceController(
                         device.name, device.pid, hid_control["path"]
                     )

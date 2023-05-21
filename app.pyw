@@ -1,7 +1,6 @@
 from dataclasses import dataclass
 from threading import Thread, Event, Lock
 from device_manager import DeviceManager
-from winotify import Notification, audio
 from PIL import Image
 from pathlib import Path
 import pystray
@@ -57,7 +56,8 @@ class TrayIconApp(Thread):
         self.__device_fetcher = Thread(target=self.__device_fetching_thread_function)
 
     def run(self):
-        self.__tray_icon.run_detached()
+        tray_icon_thread = Thread(target=self.__tray_icon.run)
+        tray_icon_thread.start()
         self.__device_fetcher.start()
 
         while not self.__exit_event.wait(BATTERY_UPDATE_INTERVAL):
@@ -65,6 +65,7 @@ class TrayIconApp(Thread):
 
         self.__device_fetcher.join()
         self.__tray_icon.stop()
+        tray_icon_thread.join()
 
     def __device_fetching_thread_function(self):
         while not self.__exit_event.is_set():
@@ -122,14 +123,10 @@ class TrayIconApp(Thread):
         return menu
 
     def __notify(self, device_name: str, massage: str, battery_level: int):
-        toast = Notification(
-            icon=str(PROJECT_PATH / NOTIFICATION_LOGO_FILENAME),
-            app_id="Razer Battery Checker",
+        self.__tray_icon.notify(
             title="{:s}: {:s}".format(device_name, massage),
-            msg="Battery Level: {:d}%".format(battery_level),
+            message="Battery Level: {:d}%".format(battery_level),
         )
-        toast.set_audio(audio.Default, loop=False)
-        toast.show()
 
     def __check_notify(self, devices: list[int]):
         for id in devices:
