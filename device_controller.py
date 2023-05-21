@@ -152,7 +152,7 @@ class DeviceController:
             self.__handle.open_path(self.__path)
         except OSError as e:
             logger.error(
-                "Failed to open device: {:s} with error message: {}".format(
+                "Failed to open device: {:s} with error message: {:s}".format(
                     self.__name, str(e)
                 )
             )

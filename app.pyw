@@ -57,6 +57,7 @@ class TrayIconApp(Thread):
 
     def run(self):
         tray_icon_thread = Thread(target=self.__tray_icon.run)
+
         tray_icon_thread.start()
         self.__device_fetcher.start()
 
