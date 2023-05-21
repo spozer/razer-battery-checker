@@ -153,21 +153,21 @@ class TrayIconApp(Thread):
                     if battery_level == -1:
                         continue
 
-                    old_battery_level = self._devices[id].battery_level
-                    self._devices[id].battery_level = battery_level
+                    device = self._devices[id]
+
+                    old_battery_level = device.battery_level
+                    device.battery_level = battery_level
 
                     if old_battery_level != -1:
-                        self._devices[id].old_battery_level = old_battery_level
+                        device.old_battery_level = old_battery_level
 
-                    self._devices[
-                        id
-                    ].is_charging = self._device_manager.is_device_charging(id)
+                    device.is_charging = self._device_manager.is_device_charging(id)
 
                     logger.info(
                         "Updated battery level {:d}%, charging: {} for {:s}".format(
                             battery_level,
-                            self._devices[id].is_charging,
-                            self._devices[id].name,
+                            device.is_charging,
+                            device.name,
                         )
                     )
 

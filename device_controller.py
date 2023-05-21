@@ -3,7 +3,9 @@ import hid
 import time
 import logging
 
-MAX_RETRY_SEND = 2
+MAX_TRIES_SEND = 10
+TIME_BETWEEN_SEND = 0.5  # seconds
+
 
 logger = logging.getLogger(__name__)
 
@@ -123,6 +125,13 @@ class DeviceController:
 
         match pid:
             case (
+                RAZER_NAGA_PRO_WIRED.pid
+                | RAZER_NAGA_PRO_WIRELESS.pid
+                | RAZER_BASILISK_V3_PRO_WIRED.pid
+                | RAZER_BASILISK_V3_PRO_WIRELESS.pid
+            ):
+                self._transaction_id = 0x1F
+            case (
                 RAZER_DEATHADDER_V2_PRO_WIRED.pid
                 | RAZER_DEATHADDER_V2_PRO_WIRELESS.pid
                 | _
@@ -195,7 +204,7 @@ class DeviceController:
         response = None
 
         # try to resend report if device is busy or non responsive
-        for i in range(MAX_RETRY_SEND + 1):
+        for i in range(MAX_TRIES_SEND):
             # TODO exception handling
             self._usb_send(request)
 
@@ -231,15 +240,11 @@ class DeviceController:
                     logger.error("Error unknown report status")
                     raise ValueError("Error unknown report status")
 
-            if i == MAX_RETRY_SEND:
-                logger.error(
-                    "Abort command after {:d} tries".format(MAX_RETRY_SEND + 1)
-                )
-                raise ValueError(
-                    "Abort command (tries: {:d})".format(MAX_RETRY_SEND + 1)
-                )
+            if i == MAX_TRIES_SEND - 1:
+                logger.error("Abort command after {:d} tries".format(MAX_TRIES_SEND))
+                raise ValueError("Abort command (tries: {:d})".format(MAX_TRIES_SEND))
 
-            time.sleep(0.1)
+            time.sleep(TIME_BETWEEN_SEND)
             print("Trying to resend command")
 
         return response
@@ -268,7 +273,7 @@ class DeviceController:
 
         # windows expects report id as first entry of report
         bytes_sent = self._handle.send_feature_report([self._report_id] + data)
-        time.sleep(0.05)
+        time.sleep(0.06)
 
         if bytes_sent != len(data) + 1:
             logger.error("Error while sending feature report")
@@ -279,7 +284,7 @@ class DeviceController:
         expected_length = 91
 
         data = self._handle.get_feature_report(self._report_id, expected_length)
-        time.sleep(0.1)
+        # time.sleep(0.1)
 
         if len(data) != expected_length:
             logger.error("Error while getting feature report")
