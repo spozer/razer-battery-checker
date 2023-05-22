@@ -2,7 +2,7 @@
 
 Simple system tray icon app to show battery level of various razer devices. Should work on Linux, Windows and macOS (latter not tested). Mostly adapted from [OpenRazer](https://github.com/openrazer/openrazer) and [OpenRGB](https://github.com/CalcProgrammer1/OpenRGB).
 
-![screenshot](/screenshot.PNG)
+![screenshot](/screenshot.png)
 
 ## Adding new devices
 
