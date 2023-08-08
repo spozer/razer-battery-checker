@@ -135,8 +135,9 @@ class TrayIconApp(Thread):
             if device.battery_level == -1:
                 continue
             # check for low battery level
-            if device.battery_level <= 5 or (
-                device.old_battery_level > 15 and device.battery_level <= 15
+            if not device.is_charging and (
+                device.battery_level <= 5
+                or (device.old_battery_level > 15 and device.battery_level <= 15)
             ):
                 self.__notify(device.name, "Battery low", device.battery_level)
             # check if battery charged fully
