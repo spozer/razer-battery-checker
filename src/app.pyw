@@ -1,21 +1,26 @@
+import sys
+from pathlib import Path
+import logging
 from dataclasses import dataclass
 from threading import Thread, Event, Lock
-from device_manager import DeviceManager
 from PIL import Image
-from pathlib import Path
 import pystray
-import logging
+from device_manager import DeviceManager
 
 
-PROJECT_PATH = Path(__file__).parent.resolve()
-TRAY_ICON_LOGO_FILENAME = "razer-logo-tray.png"
-NOTIFICATION_LOGO_FILENAME = "razer-logo.png"
+try:
+    BASE_PATH = Path(sys._MEIPASS)
+except Exception:
+    BASE_PATH = Path(__file__).parent.parent.resolve()
+
+TRAY_ICON_LOGO_PATH = "images/razer-logo-tray.png"
+NOTIFICATION_LOGO_PATH = "images/razer-logo.png"
 
 BATTERY_UPDATE_INTERVAL = 120  # seconds
 DEVICE_FETCH_INTERVAL = 5  # seconds
 
 logging.basicConfig(
-    filename=PROJECT_PATH / "razer_battery_checker.log",
+    filename=BASE_PATH / "razer_battery_checker.log",
     filemode="w",
     level=logging.DEBUG,
     format="%(asctime)s,%(msecs)03d %(levelname)-8s [%(filename)s:%(funcName)s:%(lineno)d] %(message)s",
@@ -50,7 +55,7 @@ class TrayIconApp(Thread):
         self.__device_manager = DeviceManager()
         self.__tray_icon = pystray.Icon(
             "Razer Battery Checker",
-            Image.open(PROJECT_PATH / TRAY_ICON_LOGO_FILENAME),
+            Image.open(BASE_PATH / TRAY_ICON_LOGO_PATH),
             "Razer Battery Checker",
         )
         self.__device_fetcher = Thread(target=self.__device_fetching_thread_function)
